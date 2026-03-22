@@ -4,6 +4,10 @@ const axios = require("axios");
 const app = express();
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("AI Studio is running 🚀");
+});
+
 app.post("/generate", async (req, res) => {
   try {
     const response = await axios({
@@ -11,7 +15,7 @@ app.post("/generate", async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.HF_TOKEN}`,
-      }, // 👈 دي كانت ناقصة
+      },
       data: {
         inputs: req.body.prompt,
       },
@@ -28,5 +32,4 @@ app.post("/generate", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("running"));
+app.listen(3000, () => console.log("running"));

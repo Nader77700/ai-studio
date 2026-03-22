@@ -1,7 +1,9 @@
-<!DOCTYPE html><html lang="ar">
+<!DOCTYPE html>
+<html lang="ar">
 <head>
   <meta charset="UTF-8">
   <title>AI Studio</title>
+
   <style>
     body {
       background: #0b0f1a;
@@ -9,56 +11,77 @@
       font-family: Arial;
       text-align: center;
       padding-top: 50px;
-    }h1 {
-  font-size: 28px;
-}
+    }
 
-input {
-  width: 80%;
-  max-width: 400px;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  margin-top: 20px;
-}
+    h1 {
+      font-size: 28px;
+    }
 
-button {
-  margin-top: 15px;
-  padding: 12px 25px;
-  border: none;
-  border-radius: 8px;
-  background: #6c5ce7;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-}
+    input {
+      width: 80%;
+      max-width: 400px;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 20px;
+    }
 
-img {
-  margin-top: 20px;
-  width: 300px;
-  border-radius: 10px;
-  display: none;
-}
+    button {
+      margin-top: 15px;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      background: #6c5ce7;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
 
-.loading {
-  margin-top: 15px;
-  display: none;
-}
+    img {
+      margin-top: 20px;
+      width: 300px;
+      border-radius: 10px;
+      display: none;
+    }
 
+    .loading {
+      margin-top: 15px;
+      display: none;
+    }
   </style>
 </head>
-<body>  <h1>🔥 AI Studio</h1>  <input id="prompt" placeholder="اكتب وصف الصورة..." />  <br><button onclick="generateImage()Generate</button>
 
-  <div class="loading" id="loading">⏳ جاري التوليد...</div>  <br>  <img id="result" />  <script>
+<body>
+
+  <h1>🔥 AI Studio</h1>
+
+  <input id="prompt" placeholder="اكتب وصف الصورة..." />
+
+  <br>
+
+  <!-- ✅ تم اصلاح الزرار -->
+  <button id="btn" onclick="generateImage()">Generate</button>
+
+  <div class="loading" id="loading">⏳ جاري التوليد...</div>
+
+  <br>
+
+  <img id="result" />
+
+  <script>
     async function generateImage() {
       const prompt = document.getElementById("prompt").value;
       const img = document.getElementById("result");
       const loading = document.getElementById("loading");
+      const btn = document.getElementById("btn");
 
       if (!prompt) {
         alert("اكتب وصف الاول");
         return;
       }
+
+      btn.innerText = "⏳ جاري التوليد...";
+      btn.disabled = true;
 
       loading.style.display = "block";
       img.style.display = "none";
@@ -74,13 +97,22 @@ img {
 
         const data = await res.json();
 
-        img.src = data.result;
-        img.style.display = "block";
+        if (data.result) {
+          img.src = data.result;
+          img.style.display = "block";
+        } else {
+          alert("فشل التوليد");
+        }
+
       } catch (err) {
         alert("حصل خطأ");
       }
 
       loading.style.display = "none";
+      btn.innerText = "Generate";
+      btn.disabled = false;
     }
-  </script></body>
+  </script>
+
+</body>
 </html>

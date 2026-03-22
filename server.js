@@ -8,16 +8,20 @@ app.use(express.static("."));
 app.post("/generate", async (req, res) => {
   try {
     const response = await axios({
-      url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.HF_TOKEN}`,
-      },
-      data: {
-        inputs: req.body.prompt,
-      },
-      responseType: "arraybuffer",
-    });
+  url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.HF_TOKEN}`,
+    "Content-Type": "application/json"
+  },
+  data: {
+    inputs: req.body.prompt,
+    options: {
+      wait_for_model: true
+    }
+  },
+  responseType: "arraybuffer",
+});
 
     const base64 = Buffer.from(response.data).toString("base64");
 

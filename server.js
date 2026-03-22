@@ -24,10 +24,10 @@ app.post("/generate", async (req, res) => {
     res.json({
       result: `data:image/png;base64,${base64}`,
     });
-  } catch (err) {
-    res.status(500).json({ error: "error" });
-  }
-});
+catch (err) {
+  console.log(err.response?.data || err.message);
+  res.status(500).json({ error: "Generation failed" });
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("running on " + PORT));

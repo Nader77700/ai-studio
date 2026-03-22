@@ -4,11 +4,13 @@ const axios = require("axios");
 const app = express();
 app.use(express.json());
 app.use(express.static("."));
-
+app.get("/", (req, res) => {
+  res.send("AI Studio is running 🚀");
+});
 app.post("/generate", async (req, res) => {
   try {
     const response = await axios({
-  url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
+  url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
   method: "POST",
   headers: {
     Authorization: `Bearer ${process.env.HF_TOKEN}`,
@@ -30,8 +32,7 @@ app.post("/generate", async (req, res) => {
     });
 catch (err) {
   console.log(err.response?.data || err.message);
-  res.status(500).json({ error: "Generation failed" });
-}
+  res.status(500).json({ error: err.response?.data || err.message });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("running on " + PORT));

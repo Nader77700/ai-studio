@@ -11,6 +11,7 @@ app.post("/generate", async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.HF_TOKEN}`,
+      }, // 👈 دي كانت ناقصة
       data: {
         inputs: req.body.prompt,
       },
@@ -22,9 +23,10 @@ app.post("/generate", async (req, res) => {
     res.json({
       result: `data:image/png;base64,${base64}`,
     });
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "error" });
   }
 });
 
-app.listen(3000, () => console.log("running"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("running"));

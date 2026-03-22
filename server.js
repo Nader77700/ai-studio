@@ -10,7 +10,7 @@ app.get("/", (req, res) => {
 app.post("/generate", async (req, res) => {
   try {
     const response = await axios({
-      url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+      url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.HF_TOKEN}`,

@@ -10,29 +10,36 @@ app.get("/", (req, res) => {
 app.post("/generate", async (req, res) => {
   try {
     const response = await axios({
-  url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${process.env.HF_TOKEN}`,
-    "Content-Type": "application/json"
-  },
-  data: {
-    inputs: req.body.prompt,
-    options: {
-      wait_for_model: true
+      url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.HF_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      data: {
+        inputs: req.body.prompt,
+        options: {
+          wait_for_model: true
+        }
+      },
+      responseType: "arraybuffer",
+    });
+
+    if (response.headers["content-type"] !== "image/png") {
+      throw new Error("Model did not return image");
     }
-  },
-  responseType: "arraybuffer",
-});
 
     const base64 = Buffer.from(response.data).toString("base64");
 
     res.json({
       result: `data:image/png;base64,${base64}`,
     });
-catch (err) {
-  console.log(err.response?.data || err.message);
-  res.status(500).json({ error: err.response?.data || err.message });
+
+  } catch (err) {
+    console.log("ERROR:", err.response?.data || err.message);
+    res.status(500).json({ error: "Generation failed" });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("running on " + PORT));

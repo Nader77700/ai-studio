@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const axios = require("axios");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(express.static("public"));
 
 // ================= DB =================
@@ -21,7 +21,6 @@ const UserSchema = new mongoose.Schema({
   plan: { type: String, default: "free" },
   role: { type: String, default: "user" },
 
-  // 🔥 NEW
   createdAt: { type: Date, default: Date.now },
   lastLogin: Date,
   imagesCount: { type: Number, default: 0 },
@@ -101,7 +100,6 @@ app.post("/login", async (req, res) => {
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.json({ error: "Wrong password" });
 
-  // 🔥 تحديث آخر دخول
   user.lastLogin = new Date();
   await user.save();
 
@@ -124,7 +122,6 @@ app.post("/generate", auth, async (req, res) => {
     return res.status(403).json({ error: "تم حظرك" });
   }
 
-  // 🔥 الأدمن يعدي عادي
   if (user.plan !== "premium" && user.role !== "admin") {
     return res.status(403).json({ error: "اشترك الاول" });
   }
@@ -132,35 +129,30 @@ app.post("/generate", auth, async (req, res) => {
   try {
     let finalPrompt = prompt || "";
 
-    // 🔥 دعم الصور المرجعية
     if (images && images.length > 0) {
-
       if (images.length > 4) {
         return res.json({ error: "اقصى عدد صور 4" });
       }
 
       finalPrompt += `
-      
-      🔥 STRICT FACE IDENTITY LOCK:
-      - Preserve exact face from reference
-      - No face modification
-      - No beautification
-      - Keep real skin texture
-      - Same identity 100%
+STRICT FACE IDENTITY LOCK:
+- Preserve exact face from reference
+- No face modification
+- No beautification
+- Keep real skin texture
+- Same identity 100%
 
-      Use reference images for:
-      - Face structure
-      - Skin tone
-      - Details
-
-      `;
-    }
+Use reference images for:
+- Face structure
+- Skin tone
+- Details
+`;
 
     const response = await axios({
       url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.HF_TOKEN}`,
+        Authorization: `Bearer ${process.env.HF_TOKEN}`
         "Content-Type": "application/json"
       },
       data: {
@@ -171,13 +163,13 @@ app.post("/generate", auth, async (req, res) => {
 
     const base64 = Buffer.from(response.data).toString("base64");
 
-    // 🔥 زيادة عدد الصور
     user.imagesCount += 1;
     await user.save();
 
     res.json({
- result: `data:image/png;base64,${base64}`
-});
+      result:`data:image/png;base64,${base64}`
+    });
+
   } catch (err) {
     console.log(err.message);
     res.status(500).json({ error: "فشل التوليد" });
@@ -185,14 +177,11 @@ app.post("/generate", auth, async (req, res) => {
 });
 
 // ================= ADMIN =================
-
-// كل المستخدمين
 app.get("/admin/users", auth, adminOnly, async (req, res) => {
   const users = await User.find();
   res.json(users);
 });
 
-// حظر / فك حظر
 app.post("/admin/ban", auth, adminOnly, async (req, res) => {
   const { id } = req.body;
 
@@ -205,21 +194,17 @@ app.post("/admin/ban", auth, adminOnly, async (req, res) => {
   res.json({ message: user.isBanned ? "تم الحظر" : "تم فك الحظر" });
 });
 
-// ترقية لمشرف / ادمن
 app.post("/admin/role", auth, adminOnly, async (req, res) => {
   const { id, role } = req.body;
 
   await User.findByIdAndUpdate(id, { role });
-
   res.json({ message: "تم تحديث الصلاحية" });
 });
 
-// إعادة تعيين باسورد
 app.post("/admin/reset-password", auth, adminOnly, async (req, res) => {
   const { id, newPassword } = req.body;
 
   const hashed = await bcrypt.hash(newPassword, 10);
-
   await User.findByIdAndUpdate(id, { password: hashed });
 
   res.json({ message: "تم تغيير الباسورد" });

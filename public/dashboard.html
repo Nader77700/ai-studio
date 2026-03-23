@@ -6,7 +6,7 @@
 <title>AI Studio</title>
 
 <style>
-body {
+body{
   margin:0;
   font-family:Arial;
   background:#0f172a;
@@ -14,25 +14,26 @@ body {
 }
 
 /* Layout */
-.container {
+.container{
   display:flex;
   height:100vh;
 }
 
 /* Sidebar */
-.sidebar {
-  width:220px;
+.sidebar{
+  width:230px;
   background:#020617;
   padding:15px;
+  transition:.3s;
 }
 
-.logo {
+.logo{
   font-size:22px;
   color:#facc15;
   margin-bottom:20px;
 }
 
-.menu button {
+.menu button{
   width:100%;
   padding:12px;
   margin:8px 0;
@@ -40,22 +41,36 @@ body {
   border:none;
   border-radius:10px;
   color:white;
+  cursor:pointer;
 }
 
 /* Chat */
-.chat {
+.chat{
   flex:1;
   display:flex;
   flex-direction:column;
 }
 
-.header {
+/* Header */
+.header{
   padding:15px;
   background:#020617;
+  display:flex;
+  align-items:center;
+  gap:10px;
   border-bottom:1px solid #1e293b;
 }
 
-.messages {
+.menuToggle{
+  background:none;
+  border:none;
+  color:white;
+  font-size:22px;
+  cursor:pointer;
+}
+
+/* Messages */
+.messages{
   flex:1;
   padding:15px;
   overflow-y:auto;
@@ -63,8 +78,7 @@ body {
   flex-direction:column;
 }
 
-/* Messages */
-.msg {
+.msg{
   max-width:75%;
   padding:10px 15px;
   border-radius:15px;
@@ -72,25 +86,25 @@ body {
   word-wrap:break-word;
 }
 
-.userMsg {
+.userMsg{
   background:#4f46e5;
   align-self:flex-end;
 }
 
-.aiMsg {
+.aiMsg{
   background:#1e293b;
   align-self:flex-start;
 }
 
-.aiMsg img {
+.aiMsg img{
   width:100%;
-  max-width:300px;
+  max-width:280px;
   border-radius:10px;
-  margin-top:10px;
+  margin-top:8px;
 }
 
 /* Input */
-.inputArea {
+.inputArea{
   padding:10px;
   background:#020617;
   display:flex;
@@ -98,7 +112,7 @@ body {
   gap:8px;
 }
 
-textarea {
+textarea{
   width:100%;
   padding:10px;
   border-radius:10px;
@@ -106,22 +120,29 @@ textarea {
   resize:none;
 }
 
-.primary {
+.primary{
   background:#6366f1;
   color:white;
-  padding:10px;
+  padding:12px;
   border:none;
   border-radius:10px;
+  cursor:pointer;
 }
 
 /* Preview */
-.preview img {
+.preview{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+}
+
+.preview img{
   width:60px;
   border-radius:8px;
 }
 
 /* Toast */
-#toast {
+#toast{
   position:fixed;
   bottom:20px;
   left:50%;
@@ -130,12 +151,26 @@ textarea {
   padding:12px 20px;
   border-radius:10px;
   display:none;
+  animation:fade .3s;
+}
+
+@keyframes fade{
+  from{opacity:0; transform:translate(-50%,20px);}
+  to{opacity:1; transform:translate(-50%,0);}
 }
 
 /* Mobile */
 @media(max-width:768px){
-  .sidebar {
-    display:none;
+  .sidebar{
+    position:fixed;
+    left:-100%;
+    top:0;
+    height:100%;
+    z-index:1000;
+  }
+
+  .sidebar.active{
+    left:0;
   }
 }
 </style>
@@ -164,7 +199,10 @@ textarea {
   <!-- Chat -->
   <div class="chat">
 
-    <div class="header" id="username">مرحباً 👑</div>
+    <div class="header">
+      <button class="menuToggle" onclick="toggleMenu()">☰</button>
+      <div id="username">مرحباً 👑</div>
+    </div>
 
     <div class="messages" id="messages">
       <div class="msg aiMsg">🔥 جاهز أعملك صور احترافية</div>
@@ -189,119 +227,103 @@ textarea {
 
 <script>
 let token = localStorage.getItem("token");
+if (!token) window.location.href="/login.html";
 
-if (!token) {
-  window.location.href = "/login.html";
+function toggleMenu(){
+  document.querySelector(".sidebar").classList.toggle("active");
 }
 
 function showToast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.style.display = "block";
-
-  setTimeout(()=> t.style.display="none",3000);
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",3000);
 }
 
-function parseJwt(token) {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch {
-    return null;
-  }
+function parseJwt(token){
+  try{return JSON.parse(atob(token.split('.')[1]));}
+  catch{return null;}
 }
 
-const user = parseJwt(token);
-
-if (user && user.role === "admin") {
-  document.getElementById("adminBtn").style.display = "block";
+const user=parseJwt(token);
+if(user && user.role==="admin"){
+  document.getElementById("adminBtn").style.display="block";
 }
 
-function previewImages() {
-  const files = document.getElementById("images").files;
-  const preview = document.getElementById("preview");
+function previewImages(){
+  const files=document.getElementById("images").files;
+  const preview=document.getElementById("preview");
 
-  preview.innerHTML = "";
+  preview.innerHTML="";
 
-  if (files.length > 4) return showToast("اقصى 4 صور");
+  if(files.length>4) return showToast("اقصى 4 صور");
 
-  Array.from(files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      preview.innerHTML += `<img src="${e.target.result}">`;
+  Array.from(files).forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      preview.innerHTML+=`<img src="${e.target.result}">`;
     };
     reader.readAsDataURL(file);
   });
 }
 
-function toBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
+function toBase64(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=()=>res(reader.result);
+    reader.onerror=rej;
     reader.readAsDataURL(file);
   });
 }
 
-async function generate() {
-  const prompt = document.getElementById("prompt").value;
-  const files = document.getElementById("images").files;
+async function generate(){
+  const prompt=document.getElementById("prompt").value;
+  const files=document.getElementById("images").files;
 
-  let images = [];
-
-  for (let file of files) {
-    images.push(await toBase64(file));
+  let images=[];
+  for(let f of files){
+    images.push(await toBase64(f));
   }
 
-  messages.innerHTML += `
+  messages.innerHTML+=`
     <div class="msg userMsg">${prompt}</div>
   `;
 
-  const res = await fetch("/generate", {
+  const res=await fetch("/generate",{
     method:"POST",
     headers:{
       "Content-Type":"application/json",
-      "Authorization": token
+      "Authorization":token
     },
-    body: JSON.stringify({ prompt, images })
+    body:JSON.stringify({prompt,images})
   });
 
-  const data = await res.json();
+  const data=await res.json();
 
-  if (data.error){
+  if(data.error){
     showToast(data.error);
     return;
   }
 
-  messages.innerHTML += `
+  messages.innerHTML+=`
     <div class="msg aiMsg">
       <img src="${data.result}">
     </div>
   `;
 
-  messages.scrollTop = messages.scrollHeight;
+  messages.scrollTop=messages.scrollHeight;
 }
 
-// Nav
-function logout() {
+/* Navigation */
+function logout(){
   localStorage.removeItem("token");
-  window.location.href = "/login.html";
+  window.location.href="/login.html";
 }
 
-function goAdmin() {
-  window.location.href = "/admin.html";
-}
-
-function goFace() {
-  window.location.href = "/face.html";
-}
-
-function goImages() {
-  window.location.href = "/images.html";
-}
-
-function newChat() {
-  messages.innerHTML = "";
-}
+function goAdmin(){window.location.href="/admin.html";}
+function goFace(){window.location.href="/face.html";}
+function goImages(){window.location.href="/images.html";}
+function newChat(){messages.innerHTML="";}
 </script>
 
 </body>

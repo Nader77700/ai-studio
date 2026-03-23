@@ -147,7 +147,7 @@ STRICT FACE IDENTITY LOCK:
     for (let i = 0; i < 3; i++) {
       try {
         response = await axios.post(
-  "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",  // 👈 الفاصلة هنا
+  "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1",  // 👈 الفاصلة هنا
   { inputs: finalPrompt },
   {
     headers: {

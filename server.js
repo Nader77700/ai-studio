@@ -18,7 +18,8 @@ const UserSchema = new mongoose.Schema({
   username: String,
   email: String,
   password: String,
-  plan: { type: String, default: "free" }
+  plan: { type: String, default: "free" },
+  role: { type: String, default: "user" } // 🔥 جديد
 });
 
 const PaymentSchema = new mongoose.Schema({
@@ -47,6 +48,14 @@ function auth(req, res, next) {
   }
 }
 
+// 🔥 Admin middleware
+function adminOnly(req, res, next) {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "مش مسموح" });
+  }
+  next();
+}
+
 // ================= REGISTER =================
 app.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
@@ -65,7 +74,8 @@ app.post("/register", async (req, res) => {
   await User.create({
     username,
     email,
-    password: hashed
+    password: hashed,
+    role: email === "www.aanadr@gmail.com" ? "admin" : "user" // 👈 انت الأدمن
   });
 
   res.json({ message: "Account created ✅" });
@@ -83,7 +93,10 @@ app.post("/login", async (req, res) => {
 
   if (!match) return res.json({ error: "Wrong password" });
 
-  const token = jwt.sign({ id: user._id }, SECRET);
+  const token = jwt.sign({
+    id: user._id,
+    role: user.role // 🔥 مهم
+  }, SECRET);
 
   res.json({ token, username: user.username });
 });
@@ -106,14 +119,14 @@ app.post("/submit-payment", auth, async (req, res) => {
 
 // ================= ADMIN =================
 
-// كل الطلبات
-app.get("/admin/payments", async (req, res) => {
+// كل الطلبات (محمية)
+app.get("/admin/payments", auth, adminOnly, async (req, res) => {
   const payments = await Payment.find();
   res.json(payments);
 });
 
-// الموافقة
-app.post("/admin/approve", async (req, res) => {
+// الموافقة (محمية)
+app.post("/admin/approve", auth, adminOnly, async (req, res) => {
   const { id } = req.body;
 
   const payment = await Payment.findById(id);

@@ -2,77 +2,158 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>AI Studio</title>
+<title>AI Studio PRO</title>
+
 <style>
 body {
   background:#0b0f1a;
   color:white;
-  text-align:center;
   font-family:Arial;
+  text-align:center;
+}
+
+.container {
+  max-width:500px;
+  margin:auto;
 }
 
 input, button {
+  width:100%;
   padding:12px;
-  margin:10px;
-  border-radius:8px;
+  margin:10px 0;
+  border-radius:10px;
   border:none;
 }
 
+button {
+  background:#6c5ce7;
+  color:white;
+  cursor:pointer;
+}
+
 img {
-  width:300px;
+  width:100%;
+  margin-top:15px;
   display:none;
-  margin-top:20px;
 }
 </style>
+
 </head>
 
 <body>
 
-<h1>🔥 AI Studio</h1>
+<div class="container">
 
-<input id="prompt" placeholder="اكتب وصف الصورة" />
-<br>
+<h2>🔥 AI Studio PRO</h2>
 
-<input type="file" id="imageInput" />
-<br>
+<input id="email" placeholder="Email">
+<input id="password" placeholder="Password">
+
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
+
+<hr>
+
+<input id="prompt" placeholder="اكتب وصف الصورة">
 
 <button onclick="generate()">Generate</button>
-<button onclick="extract()">Extract Prompt</button>
 
-<br>
-<img id="result" />
+<hr>
+
+<h3>💳 رفع إثبات الدفع</h3>
+
+<input type="file" id="file">
+
+<button onclick="sendPayment()">ارسال</button>
+
+<img id="img">
+
+</div>
 
 <script>
-async function generate() {
-  const prompt = document.getElementById("prompt").value;
 
-  const res = await fetch("/generate", {
+let token = localStorage.getItem("token");
+
+// ================= AUTH =================
+
+async function register() {
+  await fetch("/register", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({
+      email: email.value,
+      password: password.value
+    })
   });
 
-  const data = await res.json();
-
-  document.getElementById("result").src = data.result;
-  document.getElementById("result").style.display = "block";
+  alert("تم التسجيل");
 }
 
-async function extract() {
-  const file = document.getElementById("imageInput").files[0];
-
-  const formData = new FormData();
-  formData.append("image", file);
-
-  const res = await fetch("/extract-prompt", {
+async function login() {
+  const res = await fetch("/login", {
     method:"POST",
-    body: formData
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      email: email.value,
+      password: password.value
+    })
   });
 
   const data = await res.json();
 
-  document.getElementById("prompt").value = data.prompt;
+  localStorage.setItem("token", data.token);
+  token = data.token;
+
+  alert("تم تسجيل الدخول");
 }
+
+// ================= GENERATE =================
+
+async function generate() {
+  const res = await fetch("/generate", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization": token
+    },
+    body: JSON.stringify({
+      prompt: prompt.value
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.error) return alert(data.error);
+
+  img.src = data.result;
+  img.style.display = "block";
+}
+
+// ================= PAYMENT =================
+
+async function sendPayment() {
+  const file = document.getElementById("file").files[0];
+
+  const reader = new FileReader();
+
+  reader.onload = async function () {
+    await fetch("/submit-payment", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization": token
+      },
+      body: JSON.stringify({
+        screenshot: reader.result
+      })
+    });
+
+    alert("تم ارسال الدفع");
+  };
+
+  reader.readAsDataURL(file);
+}
+
 </script>
 
 </body>

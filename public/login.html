@@ -24,8 +24,8 @@ button { background:#6c5ce7; color:white; }
 <script>
 async function login() {
   const res = await fetch("/login", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       email: email.value,
       password: password.value
@@ -34,10 +34,17 @@ async function login() {
 
   const data = await res.json();
 
-  if (!data.token) return alert(data.error);
+  if (data.error) {
+    return alert(data.error);
+  }
 
+  if (!data.token) {
+  console.log(data);
+  return alert("في مشكلة في تسجيل الدخول");
+  }
   localStorage.setItem("token", data.token);
 
+  // 🔥 دي أهم سطر
   window.location.href = "/dashboard.html";
 }
 
@@ -45,6 +52,6 @@ function goRegister() {
   window.location.href = "/register.html";
 }
 </script>
-
+  
 </body>
 </html>

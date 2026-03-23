@@ -42,7 +42,6 @@ const SECRET = "NADER_SECRET";
 
 function auth(req, res, next) {
   const token = req.headers.authorization;
-
   if (!token) return res.status(401).json({ error: "No token" });
 
   try {
@@ -115,18 +114,18 @@ app.post("/login", async (req, res) => {
 app.post("/generate", auth, async (req, res) => {
   const { prompt, images } = req.body;
 
-  const user = await User.findById(req.user.id);
-  if (!user) return res.json({ error: "User not found" });
-
-  if (user.isBanned) {
-    return res.status(403).json({ error: "تم حظرك" });
-  }
-
-  if (user.plan !== "premium" && user.role !== "admin") {
-    return res.status(403).json({ error: "اشترك الاول" });
-  }
-
   try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.json({ error: "User not found" });
+
+    if (user.isBanned) {
+      return res.status(403).json({ error: "تم حظرك" });
+    }
+
+    if (user.plan !== "premium" && user.role !== "admin") {
+      return res.status(403).json({ error: "اشترك الاول" });
+    }
+
     let finalPrompt = prompt || "";
 
     if (images && images.length > 0) {
@@ -149,18 +148,30 @@ Use reference images for:
 `;
     }
 
-    const response = await axios({
-      url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.HF_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      data: {
+    const response = await axios.post(
+      "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+      {
         inputs: finalPrompt
       },
-      responseType: "arraybuffer"
-    });
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        responseType: "arraybuffer",
+        timeout: 60000
+      }
+    );
+
+    // 🔥 لو رجع error JSON بدل صورة
+    const contentType = response.headers["content-type"];
+
+    if (contentType.includes("application/json")) {
+      const errorData = JSON.parse(response.data.toString());
+      return res.status(500).json({
+        error: errorData.error || "الموديل مش جاهز"
+      });
+    }
 
     const base64 = Buffer.from(response.data).toString("base64");
 
@@ -172,8 +183,17 @@ Use reference images for:
     });
 
   } catch (err) {
-    console.log(err.message);
-    res.status(500).json({ error: "فشل التوليد" });
+    console.log("🔥 ERROR:", err.message);
+
+    if (err.response) {
+      return res.status(500).json({
+        error: "الموديل لسه بيحمل أو عليه ضغط"
+      });
+    }
+
+    res.status(500).json({
+      error: "فشل التوليد"
+    });
   }
 });
 

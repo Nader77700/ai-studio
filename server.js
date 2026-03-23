@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const axios = require("axios");
 
 const app = express();
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "20mb" }));
 app.use(express.static("public"));
 
 // ================= DB =================
@@ -20,7 +20,6 @@ const UserSchema = new mongoose.Schema({
   password: String,
   plan: { type: String, default: "free" },
   role: { type: String, default: "user" },
-
   createdAt: { type: Date, default: Date.now },
   lastLogin: Date,
   imagesCount: { type: Number, default: 0 },
@@ -140,36 +139,43 @@ STRICT FACE IDENTITY LOCK:
 - No beautification
 - Keep real skin texture
 - Same identity 100%
-
-Use reference images for:
-- Face structure
-- Skin tone
-- Details
 `;
     }
 
-    const response = await axios.post(
-      "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
-      {
-        inputs: finalPrompt
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.HF_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        responseType: "arraybuffer",
-        timeout: 60000
-      }
-    );
+    // 🔥 Retry system (مهم جدا)
+    let response;
+    for (let i = 0; i < 3; i++) {
+      try {
+        response = await axios.post(
+          "https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo",
+          { inputs: finalPrompt },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.HF_TOKEN}`,
+              "Content-Type": "application/json"
+            },
+            responseType: "arraybuffer",
+            timeout: 60000
+          }
+        );
 
-    // 🔥 لو رجع error JSON بدل صورة
+        break;
+      } catch (err) {
+        console.log("Retry...", i + 1);
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+
+    if (!response) {
+      return res.status(500).json({ error: "الموديل مش بيرد" });
+    }
+
     const contentType = response.headers["content-type"];
 
     if (contentType.includes("application/json")) {
       const errorData = JSON.parse(response.data.toString());
       return res.status(500).json({
-        error: errorData.error || "الموديل مش جاهز"
+        error: errorData.error || "الموديل لسه بيحمل"
       });
     }
 
@@ -185,14 +191,8 @@ Use reference images for:
   } catch (err) {
     console.log("🔥 ERROR:", err.message);
 
-    if (err.response) {
-      return res.status(500).json({
-        error: "الموديل لسه بيحمل أو عليه ضغط"
-      });
-    }
-
     res.status(500).json({
-      error: "فشل التوليد"
+      error: "فشل التوليد (راجع التوكن)"
     });
   }
 });

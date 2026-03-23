@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>Face Swap</title>
+
+<style>
+body {
+  margin:0;
+  background:#0b0f1a;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
+
+.container {
+  padding:20px;
+}
+
+h2 {
+  color:#facc15;
+}
+
+.uploadBox {
+  margin:20px auto;
+  padding:20px;
+  border:2px dashed #444;
+  border-radius:10px;
+  width:300px;
+}
+
+img {
+  width:200px;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+button {
+  padding:10px 20px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#6c5ce7;
+  color:white;
+  margin-top:20px;
+}
+
+.result img {
+  width:300px;
+  margin-top:20px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🔁 تبديل الوجه</h2>
+
+<!-- الصورة الأساسية -->
+<div class="uploadBox">
+  <p>📸 الصورة الأساسية</p>
+  <input type="file" id="target" accept="image/*" onchange="preview('targetPreview', this)">
+  <div id="targetPreview"></div>
+</div>
+
+<!-- الصورة المرجعية -->
+<div class="uploadBox">
+  <p>👤 صورتك (الوجه)</p>
+  <input type="file" id="face" accept="image/*" onchange="preview('facePreview', this)">
+  <div id="facePreview"></div>
+</div>
+
+<button onclick="swap()">🚀 تبديل</button>
+
+<div class="result" id="result"></div>
+
+</div>
+
+<script>
+let token = localStorage.getItem("token");
+
+if (!token) {
+  window.location.href = "/login.html";
+}
+
+// Preview
+function preview(id, input) {
+  const file = input.files[0];
+  const reader = new FileReader();
+
+  reader.onload = e => {
+    document.getElementById(id).innerHTML =
+      `<img src="${e.target.result}">`;
+  };
+
+  reader.readAsDataURL(file);
+}
+
+// Base64
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
+// Swap
+async function swap() {
+  const targetFile = document.getElementById("target").files[0];
+  const faceFile = document.getElementById("face").files[0];
+
+  if (!targetFile || !faceFile) {
+    return alert("ارفع الصورتين");
+  }
+
+  const target = await toBase64(targetFile);
+  const face = await toBase64(faceFile);
+
+  const res = await fetch("/face-swap", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization": token
+    },
+    body: JSON.stringify({
+      target,
+      face
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.error) return alert(data.error);
+
+  document.getElementById("result").innerHTML = `
+    <h3>🔥 النتيجة</h3>
+    <img src="${data.result}">
+  `;
+}
+</script>
+
+</body>
+</html>

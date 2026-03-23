@@ -1,152 +1,24 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>AI Studio PRO</title>
-
-<style>
-body {
-  background:#0b0f1a;
-  color:white;
-  font-family:Arial;
-  text-align:center;
-}
-
-.container {
-  max-width:500px;
-  margin:auto;
-}
-
-input, button {
-  width:100%;
-  padding:12px;
-  margin:10px 0;
-  border-radius:10px;
-  border:none;
-}
-
-button {
-  background:#6c5ce7;
-  color:white;
-  cursor:pointer;
-}
-
-img {
-  width:100%;
-  margin-top:15px;
-  display:none;
-}
-</style>
-
+<title>Loading...</title>
 </head>
 
 <body>
 
-<div class="container">
-
-<h2>🔥 AI Studio PRO</h2>
-
-<input id="email" placeholder="Email">
-<input id="password" placeholder="Password">
-
-<button onclick="register()">Register</button>
-<button onclick="login()">Login</button>
-
-<hr>
-
-<input id="prompt" placeholder="اكتب وصف الصورة">
-
-<button onclick="generate()">Generate</button>
-
-<hr>
-
-<h3>💳 رفع إثبات الدفع</h3>
-
-<input type="file" id="file">
-
-<button onclick="sendPayment()">ارسال</button>
-
-<img id="img">
-
-</div>
-
 <script>
+const token = localStorage.getItem("token");
 
-let token = localStorage.getItem("token");
-
-// ================= AUTH =================
-
-async function register() {
-  await fetch("/register", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      email: email.value,
-      password: password.value
-    })
-  });
-
-  alert("تم التسجيل");
+if (token) {
+  window.location.href = "/dashboard.html";
+} else {
+  window.location.href = "/login.html";
 }
+</script>
 
-async function login() {
-  const res = await fetch("/login", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      email: email.value,
-      password: password.value
-    })
-  });
-
-  const data = await res.json();
-
-  localStorage.setItem("token", data.token);
-  token = data.token;
-
-  alert("تم تسجيل الدخول");
-}
-
-// ================= GENERATE =================
-
-async function generate() {
-  const res = await fetch("/generate", {
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization": token
-    },
-    body: JSON.stringify({
-      prompt: prompt.value
-    })
-  });
-
-  const data = await res.json();
-
-  if (data.error) return alert(data.error);
-
-  img.src = data.result;
-  img.style.display = "block";
-}
-
-// ================= PAYMENT =================
-
-async function sendPayment() {
-  const file = document.getElementById("file").files[0];
-
-  const reader = new FileReader();
-
-  reader.onload = async function () {
-    await fetch("/submit-payment", {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization": token
-      },
-      body: JSON.stringify({
-        screenshot: reader.result
-      })
-    });
+</body>
+</html>    });
 
     alert("تم ارسال الدفع");
   };

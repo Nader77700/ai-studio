@@ -1,40 +1,137 @@
 const express = require("express");
-const axios = require("axios");
-const multer = require("multer");
-const cors = require("cors");
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(express.static("."));
 
-const upload = multer({ storage: multer.memoryStorage() });
+// ================= DB =================
+mongoose.connect(process.env.MONGO_URI);
 
-app.get("/", (req, res) => {
-  res.send("AI Studio API Running 🚀");
+const UserSchema = new mongoose.Schema({
+  email: String,
+  password: String,
+  plan: { type: String, default: "free" }
 });
 
-// توليد صورة
-app.post("/generate", async (req, res) => {
+const PaymentSchema = new mongoose.Schema({
+  userId: String,
+  screenshot: String,
+  status: { type: String, default: "pending" }
+});
+
+const User = mongoose.model("User", UserSchema);
+const Payment = mongoose.model("Payment", PaymentSchema);
+
+// ================= AUTH =================
+const SECRET = "NADER_SECRET";
+
+function auth(req, res, next) {
+  const token = req.headers.authorization;
+
+  if (!token) return res.status(401).json({ error: "No token" });
+
   try {
-    const { prompt } = req.body;
+    const decoded = jwt.verify(token, SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+  }
+}
 
-    if (!prompt) {
-      return res.status(400).json({ error: "No prompt provided" });
-    }
+// ================= REGISTER =================
+app.post("/register", async (req, res) => {
+  const { email, password } = req.body;
 
+  const hashed = await bcrypt.hash(password, 10);
+
+  const user = await User.create({
+    email,
+    password: hashed
+  });
+
+  res.json(user);
+});
+
+// ================= LOGIN =================
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) return res.status(400).json({ error: "User not found" });
+
+  const match = await bcrypt.compare(password, user.password);
+
+  if (!match) return res.status(400).json({ error: "Wrong password" });
+
+  const token = jwt.sign({ id: user._id }, SECRET);
+
+  res.json({ token });
+});
+
+// ================= SUBMIT PAYMENT =================
+app.post("/submit-payment", auth, async (req, res) => {
+  const { screenshot } = req.body;
+
+  await Payment.create({
+    userId: req.user.id,
+    screenshot
+  });
+
+  res.json({ message: "تم ارسال الطلب" });
+});
+
+// ================= ADMIN =================
+
+// كل الطلبات
+app.get("/admin/payments", async (req, res) => {
+  const payments = await Payment.find();
+  res.json(payments);
+});
+
+// الموافقة
+app.post("/admin/approve", async (req, res) => {
+  const { id } = req.body;
+
+  const payment = await Payment.findById(id);
+
+  if (!payment) return res.status(404).json({ error: "Not found" });
+
+  payment.status = "approved";
+  await payment.save();
+
+  await User.findByIdAndUpdate(payment.userId, {
+    plan: "premium"
+  });
+
+  res.json({ message: "تم التفعيل" });
+});
+
+// ================= GENERATE =================
+const axios = require("axios");
+
+app.post("/generate", auth, async (req, res) => {
+  const user = await User.findById(req.user.id);
+
+  if (user.plan !== "premium") {
+    return res.status(403).json({ error: "اشترك الاول" });
+  }
+
+  try {
     const response = await axios({
       url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.HF_TOKEN}`,
-        "Content-Type": "application/json"
+        Authorization: `Bearer ${process.env.HF_TOKEN}`
       },
       data: {
-        inputs: prompt,
-        options: { wait_for_model: true }
+        inputs: req.body.prompt
       },
-      responseType: "arraybuffer",
-      timeout: 60000
+      responseType: "arraybuffer"
     });
 
     const base64 = Buffer.from(response.data).toString("base64");
@@ -44,22 +141,10 @@ app.post("/generate", async (req, res) => {
     });
 
   } catch (err) {
-    console.log("ERROR:", err.response?.data || err.message);
-    res.status(500).json({ error: "Generation failed" });
+    res.status(500).json({ error: "فشل التوليد" });
   }
 });
 
-// استخراج prompt من صورة
-app.post("/extract-prompt", upload.single("image"), async (req, res) => {
-  try {
-    // هنا تقدر تربط AI تاني زي BLIP
-    res.json({
-      prompt: "A man standing in front of a luxury car, outdoor daylight"
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to extract prompt" });
-  }
-});
-
+// ================= RUN =================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Running on " + PORT));
+app.listen(PORT, () => console.log("Running 🚀"));

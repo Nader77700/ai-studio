@@ -10,31 +10,66 @@ body {
   color:white;
   font-family:Arial;
   text-align:center;
+  margin:0;
 }
 
+/* 🔥 LOGO */
+.logo {
+  font-size:36px;
+  font-weight:bold;
+  color:gold;
+  letter-spacing:4px;
+  margin:20px;
+  text-shadow:0 0 15px gold;
+}
+
+/* 🔥 HEADINGS */
+h2 {
+  margin-top:0;
+}
+
+/* TABLE */
 table {
   width:95%;
   margin:auto;
   border-collapse:collapse;
+  background:#111827;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+th {
+  background:#1f2937;
 }
 
 th, td {
-  border:1px solid #444;
+  border:1px solid #333;
   padding:10px;
 }
 
+/* BUTTONS */
 button {
   padding:6px 10px;
   margin:3px;
   border:none;
   border-radius:6px;
   cursor:pointer;
+  font-weight:bold;
 }
 
 .approve { background:green; color:white; }
 .ban { background:red; color:white; }
 .role { background:orange; color:white; }
 .reset { background:purple; color:white; }
+
+/* CARD */
+.card {
+  border:1px solid #333;
+  margin:10px;
+  padding:15px;
+  border-radius:12px;
+  background:#111827;
+}
 
 img {
   border-radius:10px;
@@ -45,20 +80,15 @@ img {
 
 <body>
 
+<!-- 🔥 LOGO -->
+<div class="logo">
+  N<span style="color:white;">K</span> 👑
+</div>
+
 <h2>👑 لوحة تحكم الأدمن</h2>
 
 <h3>👤 المستخدمين</h3>
-<table id="usersTable">
-<tr>
-<th>الاسم</th>
-<th>الإيميل</th>
-<th>الخطة</th>
-<th>الدور</th>
-<th>عدد الصور</th>
-<th>آخر دخول</th>
-<th>تحكم</th>
-</tr>
-</table>
+<table id="usersTable"></table>
 
 <hr>
 
@@ -67,6 +97,10 @@ img {
 
 <script>
 const token = localStorage.getItem("token");
+
+if (!token) {
+  window.location.href = "/login.html";
+}
 
 // ================= USERS =================
 async function loadUsers() {
@@ -78,13 +112,13 @@ async function loadUsers() {
 
   usersTable.innerHTML = `
   <tr>
-  <th>الاسم</th>
-  <th>الإيميل</th>
-  <th>الخطة</th>
-  <th>الدور</th>
-  <th>عدد الصور</th>
-  <th>آخر دخول</th>
-  <th>تحكم</th>
+    <th>الاسم</th>
+    <th>الإيميل</th>
+    <th>الخطة</th>
+    <th>الدور</th>
+    <th>عدد الصور</th>
+    <th>آخر دخول</th>
+    <th>تحكم</th>
   </tr>
   `;
 
@@ -107,7 +141,7 @@ async function loadUsers() {
         </button>
 
         <button class="reset" onclick="resetPass('${u._id}')">
-          Reset Pass
+          Reset
         </button>
       </td>
     </tr>
@@ -173,7 +207,7 @@ async function loadPayments() {
 
   data.forEach(p => {
     payments.innerHTML += `
-      <div style="border:1px solid #444; margin:10px; padding:10px">
+      <div class="card">
         <img src="${p.screenshot}" width="200"><br><br>
         <button class="approve" onclick="approve('${p._id}')">
           تفعيل

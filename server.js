@@ -115,28 +115,56 @@ app.post("/login", async (req, res) => {
 
 // ================= GENERATE =================
 app.post("/generate", auth, async (req, res) => {
-  const user = await User.findById(req.user.id);
+  const { prompt, images } = req.body;
 
+  const user = await User.findById(req.user.id);
   if (!user) return res.json({ error: "User not found" });
 
   if (user.isBanned) {
     return res.status(403).json({ error: "تم حظرك" });
   }
 
-  // 🔥 admin يعدي عادي
+  // 🔥 الأدمن يعدي عادي
   if (user.plan !== "premium" && user.role !== "admin") {
     return res.status(403).json({ error: "اشترك الاول" });
   }
 
   try {
+    let finalPrompt = prompt || "";
+
+    // 🔥 دعم الصور المرجعية
+    if (images && images.length > 0) {
+
+      if (images.length > 4) {
+        return res.json({ error: "اقصى عدد صور 4" });
+      }
+
+      finalPrompt += `
+      
+      🔥 STRICT FACE IDENTITY LOCK:
+      - Preserve exact face from reference
+      - No face modification
+      - No beautification
+      - Keep real skin texture
+      - Same identity 100%
+
+      Use reference images for:
+      - Face structure
+      - Skin tone
+      - Details
+
+      `;
+    }
+
     const response = await axios({
       url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.HF_TOKEN}`
+        Authorization: \`Bearer \${process.env.HF_TOKEN}\`,
+        "Content-Type": "application/json"
       },
       data: {
-        inputs: req.body.prompt
+        inputs: finalPrompt
       },
       responseType: "arraybuffer"
     });
@@ -148,7 +176,7 @@ app.post("/generate", auth, async (req, res) => {
     await user.save();
 
     res.json({
-      result: `data:image/png;base64,${base64}`
+      result: \`data:image/png;base64,\${base64}\`
     });
 
   } catch (err) {

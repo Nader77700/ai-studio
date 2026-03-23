@@ -160,7 +160,7 @@ app.post("/generate", auth, async (req, res) => {
       url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
       method: "POST",
       headers: {
-        Authorization: \`Bearer \${process.env.HF_TOKEN}\`,
+        Authorization: `Bearer ${process.env.HF_TOKEN}`,
         "Content-Type": "application/json"
       },
       data: {
@@ -176,9 +176,8 @@ app.post("/generate", auth, async (req, res) => {
     await user.save();
 
     res.json({
-      result: \`data:image/png;base64,\${base64}\`
-    });
-
+ result: `data:image/png;base64,${base64}`
+});
   } catch (err) {
     console.log(err.message);
     res.status(500).json({ error: "فشل التوليد" });

@@ -2,14 +2,15 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Studio</title>
 
 <style>
 body {
   margin:0;
-  background:#0b0f1a;
-  color:white;
   font-family:Arial;
+  background:#0f172a;
+  color:white;
 }
 
 /* Layout */
@@ -20,27 +21,25 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width:250px;
-  background:#111827;
-  padding:20px;
+  width:220px;
+  background:#020617;
+  padding:15px;
 }
 
 .logo {
-  font-size:24px;
-  font-weight:bold;
+  font-size:22px;
   color:#facc15;
   margin-bottom:20px;
 }
 
 .menu button {
   width:100%;
-  padding:10px;
-  margin:5px 0;
+  padding:12px;
+  margin:8px 0;
+  background:#1e293b;
   border:none;
-  border-radius:8px;
-  background:#1f2937;
+  border-radius:10px;
   color:white;
-  cursor:pointer;
 }
 
 /* Chat */
@@ -52,35 +51,51 @@ body {
 
 .header {
   padding:15px;
-  background:#111827;
-  display:flex;
-  justify-content:space-between;
+  background:#020617;
+  border-bottom:1px solid #1e293b;
 }
 
 .messages {
   flex:1;
-  padding:20px;
+  padding:15px;
   overflow-y:auto;
+  display:flex;
+  flex-direction:column;
 }
 
+/* Messages */
 .msg {
-  margin-bottom:20px;
+  max-width:75%;
+  padding:10px 15px;
+  border-radius:15px;
+  margin:10px 0;
+  word-wrap:break-word;
 }
 
 .userMsg {
-  text-align:right;
+  background:#4f46e5;
+  align-self:flex-end;
+}
+
+.aiMsg {
+  background:#1e293b;
+  align-self:flex-start;
 }
 
 .aiMsg img {
-  width:300px;
+  width:100%;
+  max-width:300px;
   border-radius:10px;
   margin-top:10px;
 }
 
 /* Input */
 .inputArea {
-  padding:15px;
-  background:#111827;
+  padding:10px;
+  background:#020617;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 
 textarea {
@@ -88,29 +103,48 @@ textarea {
   padding:10px;
   border-radius:10px;
   border:none;
-  margin-bottom:10px;
+  resize:none;
 }
 
-button {
+.primary {
+  background:#6366f1;
+  color:white;
   padding:10px;
   border:none;
-  border-radius:8px;
-  cursor:pointer;
+  border-radius:10px;
 }
-
-.primary { background:#6c5ce7; color:white; }
 
 /* Preview */
 .preview img {
-  width:70px;
-  margin:5px;
+  width:60px;
   border-radius:8px;
+}
+
+/* Toast */
+#toast {
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#ef4444;
+  padding:12px 20px;
+  border-radius:10px;
+  display:none;
+}
+
+/* Mobile */
+@media(max-width:768px){
+  .sidebar {
+    display:none;
+  }
 }
 </style>
 
 </head>
 
 <body>
+
+<div id="toast"></div>
 
 <div class="container">
 
@@ -130,23 +164,16 @@ button {
   <!-- Chat -->
   <div class="chat">
 
-    <div class="header">
-      <div id="username">مرحباً 👑</div>
-      <div>AI Studio</div>
-    </div>
+    <div class="header" id="username">مرحباً 👑</div>
 
     <div class="messages" id="messages">
-
-      <div class="msg aiMsg">
-        <div>🔥 جاهز أعملك صور احترافية</div>
-      </div>
-
+      <div class="msg aiMsg">🔥 جاهز أعملك صور احترافية</div>
     </div>
 
     <!-- Input -->
     <div class="inputArea">
 
-      <textarea id="prompt" placeholder="اكتب طلبك أو ارفع صور..."></textarea>
+      <textarea id="prompt" placeholder="اكتب طلبك..."></textarea>
 
       <input type="file" id="images" multiple accept="image/*" onchange="previewImages()">
 
@@ -167,7 +194,14 @@ if (!token) {
   window.location.href = "/login.html";
 }
 
-// Decode JWT
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.display = "block";
+
+  setTimeout(()=> t.style.display="none",3000);
+}
+
 function parseJwt(token) {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -178,27 +212,17 @@ function parseJwt(token) {
 
 const user = parseJwt(token);
 
-// اسم المستخدم
-if (user) {
-  document.getElementById("username").innerText = "مرحباً 👑";
-}
-
-// admin button
 if (user && user.role === "admin") {
   document.getElementById("adminBtn").style.display = "block";
 }
 
-// Preview images
 function previewImages() {
   const files = document.getElementById("images").files;
   const preview = document.getElementById("preview");
 
   preview.innerHTML = "";
 
-  if (files.length > 4) {
-    alert("اقصى عدد 4 صور");
-    return;
-  }
+  if (files.length > 4) return showToast("اقصى 4 صور");
 
   Array.from(files).forEach(file => {
     const reader = new FileReader();
@@ -209,42 +233,27 @@ function previewImages() {
   });
 }
 
-// Convert to base64
 function toBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
-// Generate
 async function generate() {
   const prompt = document.getElementById("prompt").value;
   const files = document.getElementById("images").files;
 
   let images = [];
 
-  if (files.length > 0) {
-    if (files.length > 4) {
-      return alert("اقصى عدد 4 صور");
-    }
-
-    for (let file of files) {
-      const base64 = await toBase64(file);
-      images.push(base64);
-    }
+  for (let file of files) {
+    images.push(await toBase64(file));
   }
 
-  // عرض رسالة المستخدم + الصور
-  let imgsHTML = images.map(img => `<img src="${img}" width="70">`).join("");
-
   messages.innerHTML += `
-    <div class="msg userMsg">
-      ${prompt}
-      <div>${imgsHTML}</div>
-    </div>
+    <div class="msg userMsg">${prompt}</div>
   `;
 
   const res = await fetch("/generate", {
@@ -253,15 +262,15 @@ async function generate() {
       "Content-Type":"application/json",
       "Authorization": token
     },
-    body: JSON.stringify({
-      prompt,
-      images
-    })
+    body: JSON.stringify({ prompt, images })
   });
 
   const data = await res.json();
 
-  if (data.error) return alert(data.error);
+  if (data.error){
+    showToast(data.error);
+    return;
+  }
 
   messages.innerHTML += `
     <div class="msg aiMsg">
@@ -272,7 +281,7 @@ async function generate() {
   messages.scrollTop = messages.scrollHeight;
 }
 
-// Navigation
+// Nav
 function logout() {
   localStorage.removeItem("token");
   window.location.href = "/login.html";

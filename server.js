@@ -2,15 +2,20 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 
 const app = express();
 app.use(express.json());
-app.use(express.static("."));
+app.use(express.static("public")); // مهم لصفحات الفرونت
 
 // ================= DB =================
-mongoose.connect(process.env.MONGO_URI);
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("DB Connected ✅"))
+  .catch(err => console.log(err));
 
+// ================= SCHEMA =================
 const UserSchema = new mongoose.Schema({
+  username: String,
   email: String,
   password: String,
   plan: { type: String, default: "free" }
@@ -44,16 +49,22 @@ function auth(req, res, next) {
 
 // ================= REGISTER =================
 app.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+  const { username, email, password } = req.body;
+
+  const existing = await User.findOne({ email });
+  if (existing) {
+    return res.json({ error: "Email already exists" });
+  }
 
   const hashed = await bcrypt.hash(password, 10);
 
   const user = await User.create({
+    username,
     email,
     password: hashed
   });
 
-  res.json(user);
+  res.json({ message: "Account created ✅" });
 });
 
 // ================= LOGIN =================
@@ -62,15 +73,15 @@ app.post("/login", async (req, res) => {
 
   const user = await User.findOne({ email });
 
-  if (!user) return res.status(400).json({ error: "User not found" });
+  if (!user) return res.json({ error: "User not found" });
 
   const match = await bcrypt.compare(password, user.password);
 
-  if (!match) return res.status(400).json({ error: "Wrong password" });
+  if (!match) return res.json({ error: "Wrong password" });
 
   const token = jwt.sign({ id: user._id }, SECRET);
 
-  res.json({ token });
+  res.json({ token, username: user.username });
 });
 
 // ================= SUBMIT PAYMENT =================
@@ -99,7 +110,7 @@ app.post("/admin/approve", async (req, res) => {
 
   const payment = await Payment.findById(id);
 
-  if (!payment) return res.status(404).json({ error: "Not found" });
+  if (!payment) return res.json({ error: "Not found" });
 
   payment.status = "approved";
   await payment.save();
@@ -107,6 +118,45 @@ app.post("/admin/approve", async (req, res) => {
   await User.findByIdAndUpdate(payment.userId, {
     plan: "premium"
   });
+
+  res.json({ message: "تم التفعيل ✅" });
+});
+
+// ================= GENERATE =================
+app.post("/generate", auth, async (req, res) => {
+  const user = await User.findById(req.user.id);
+
+  if (user.plan !== "premium") {
+    return res.status(403).json({ error: "اشترك الاول" });
+  }
+
+  try {
+    const response = await axios({
+      url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.HF_TOKEN}`
+      },
+      data: {
+        inputs: req.body.prompt
+      },
+      responseType: "arraybuffer"
+    });
+
+    const base64 = Buffer.from(response.data).toString("base64");
+
+    res.json({
+      result: `data:image/png;base64,${base64}`
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: "فشل التوليد" });
+  }
+});
+
+// ================= RUN =================
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Running 🚀"));  });
 
   res.json({ message: "تم التفعيل" });
 });

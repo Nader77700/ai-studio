@@ -147,17 +147,17 @@ STRICT FACE IDENTITY LOCK:
     for (let i = 0; i < 3; i++) {
       try {
         response = await axios.post(
-          "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
-          { inputs: finalPrompt },
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.HF_TOKEN}`,
-              "Content-Type": "application/json"
-            },
-            responseType: "arraybuffer",
-            timeout: 60000
-          }
-        );
+  "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",  // 👈 الفاصلة هنا
+  { inputs: finalPrompt },
+  {
+    headers: {
+      Authorization: `Bearer ${process.env.HF_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    responseType: "arraybuffer",
+    timeout: 60000
+  }
+);
 
         break;
       } catch (err) {

@@ -1,24 +1,29 @@
 const express = require("express");
 const axios = require("axios");
+const multer = require("multer");
+const cors = require("cors");
 
 const app = express();
 app.use(express.json());
-app.use(express.static("."));
+app.use(cors());
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.get("/", (req, res) => {
-  res.send("AI Studio is running 🚀");
+  res.send("AI Studio API Running 🚀");
 });
 
+// توليد صورة
 app.post("/generate", async (req, res) => {
   try {
-    const prompt = req.body.prompt;
+    const { prompt } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: "No prompt provided" });
     }
 
     const response = await axios({
-      url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
+      url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.HF_TOKEN}`,
@@ -26,39 +31,35 @@ app.post("/generate", async (req, res) => {
       },
       data: {
         inputs: prompt,
-        options: {
-          wait_for_model: true,
-          use_cache: false
-        }
+        options: { wait_for_model: true }
       },
       responseType: "arraybuffer",
       timeout: 60000
     });
 
-    const contentType = response.headers["content-type"];
-
-    // 🔥 لو رجع JSON (يعني فيه Error من HuggingFace)
-    if (contentType.includes("application/json")) {
-      const errorText = Buffer.from(response.data).toString();
-      console.log("HF ERROR:", errorText);
-      return res.status(500).json({ error: "Model not ready or failed" });
-    }
-
-    // ✅ تحويل الصورة
     const base64 = Buffer.from(response.data).toString("base64");
 
     res.json({
-      result: `data:image/png;base64,${base64}`,
+      result: `data:image/png;base64,${base64}`
     });
 
   } catch (err) {
-    console.log("FULL ERROR:", err.response?.data || err.message);
+    console.log("ERROR:", err.response?.data || err.message);
+    res.status(500).json({ error: "Generation failed" });
+  }
+});
 
-    res.status(500).json({
-      error: err.response?.data || err.message
+// استخراج prompt من صورة
+app.post("/extract-prompt", upload.single("image"), async (req, res) => {
+  try {
+    // هنا تقدر تربط AI تاني زي BLIP
+    res.json({
+      prompt: "A man standing in front of a luxury car, outdoor daylight"
     });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to extract prompt" });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("running on " + PORT));
+app.listen(PORT, () => console.log("Running on " + PORT));

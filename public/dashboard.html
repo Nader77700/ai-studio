@@ -1,7 +1,10 @@
-<!DOCTYPE html><html lang="ar">
+<!DOCTYPE html>
+<html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>AI Studio</title><style>
+<title>AI Studio</title>
+
+<style>
 body {
   margin:0;
   background:#0b0f1a;
@@ -9,13 +12,13 @@ body {
   font-family:Arial;
 }
 
-/* ===== Layout ===== */
+/* Layout */
 .container {
   display:flex;
   height:100vh;
 }
 
-/* ===== Sidebar ===== */
+/* Sidebar */
 .sidebar {
   width:250px;
   background:#111827;
@@ -40,7 +43,7 @@ body {
   cursor:pointer;
 }
 
-/* ===== Chat Area ===== */
+/* Chat */
 .chat {
   flex:1;
   display:flex;
@@ -74,13 +77,13 @@ body {
   margin-top:10px;
 }
 
-/* ===== Input Area ===== */
+/* Input */
 .inputArea {
   padding:15px;
   background:#111827;
 }
 
-input, textarea {
+textarea {
   width:100%;
   padding:10px;
   border-radius:10px;
@@ -97,63 +100,74 @@ button {
 
 .primary { background:#6c5ce7; color:white; }
 
-/* Upload preview */
+/* Preview */
 .preview img {
   width:70px;
   margin:5px;
   border-radius:8px;
 }
-</style></head><body><div class="container">  <!-- ===== Sidebar ===== -->  <div class="sidebar">
-    <div class="logo">👑 NK AI</div><div class="menu">
-  <button onclick="newChat()">🧠 محادثة جديدة</button>
-  <button onclick="goImages()">🖼️ صوري</button>
-  <button onclick="goFace()">🔁 تبديل الوجه</button>
-  <button onclick="goAdmin()" id="adminBtn" style="display:none;">👑 Admin</button>
-  <button onclick="logout()">🚪 خروج</button>
-</div>
+</style>
 
-  </div>  <!-- ===== Chat ===== -->  <div class="chat"><div class="header">
-  <div>مرحباً Nader 👑</div>
-  <div>AI Studio</div>
-</div>
+</head>
 
-<div class="messages" id="messages">
+<body>
 
-  <!-- Welcome -->
-  <div class="msg aiMsg">
-    <div>🔥 جاهز أعملك صور احترافية</div>
-    <div>جرب:</div>
-    <ul>
-      <li>اعمل صورة بورتريه سينمائي</li>
-      <li>صورة احترافية بإضاءة ذهبية</li>
-      <li>اعمل تصميم إعلان</li>
-    </ul>
+<div class="container">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">👑 NK AI</div>
+
+    <div class="menu">
+      <button onclick="newChat()">🧠 محادثة جديدة</button>
+      <button onclick="goImages()">🖼️ صوري</button>
+      <button onclick="goFace()">🔁 تبديل الوجه</button>
+      <button onclick="goAdmin()" id="adminBtn" style="display:none;">👑 Admin</button>
+      <button onclick="logout()">🚪 خروج</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat">
+
+    <div class="header">
+      <div id="username">مرحباً 👑</div>
+      <div>AI Studio</div>
+    </div>
+
+    <div class="messages" id="messages">
+
+      <div class="msg aiMsg">
+        <div>🔥 جاهز أعملك صور احترافية</div>
+      </div>
+
+    </div>
+
+    <!-- Input -->
+    <div class="inputArea">
+
+      <textarea id="prompt" placeholder="اكتب طلبك أو ارفع صور..."></textarea>
+
+      <input type="file" id="images" multiple accept="image/*" onchange="previewImages()">
+
+      <div class="preview" id="preview"></div>
+
+      <button class="primary" onclick="generate()">🚀 Generate</button>
+
+    </div>
+
   </div>
 
 </div>
 
-<!-- ===== Input ===== -->
-<div class="inputArea">
-
-  <textarea id="prompt" placeholder="اكتب طلبك أو ارفع صور..."></textarea>
-
-  <!-- Upload (max 4) -->
-  <input type="file" id="images" multiple accept="image/*" onchange="previewImages()">
-
-  <div class="preview" id="preview"></div>
-
-  <button class="primary" onclick="generate()">🚀 Generate</button>
-
-</div>
-
-  </div></div><script>
+<script>
 let token = localStorage.getItem("token");
 
 if (!token) {
   window.location.href = "/login.html";
 }
 
-// ===== Decode JWT =====
+// Decode JWT
 function parseJwt(token) {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -164,12 +178,17 @@ function parseJwt(token) {
 
 const user = parseJwt(token);
 
-// admin btn
+// اسم المستخدم
+if (user) {
+  document.getElementById("username").innerText = "مرحباً 👑";
+}
+
+// admin button
 if (user && user.role === "admin") {
   document.getElementById("adminBtn").style.display = "block";
 }
 
-// ===== Preview Images =====
+// Preview images
 function previewImages() {
   const files = document.getElementById("images").files;
   const preview = document.getElementById("preview");
@@ -190,14 +209,42 @@ function previewImages() {
   });
 }
 
-// ===== Generate =====
+// Convert to base64
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
+// Generate
 async function generate() {
   const prompt = document.getElementById("prompt").value;
   const files = document.getElementById("images").files;
 
-  // add user message
+  let images = [];
+
+  if (files.length > 0) {
+    if (files.length > 4) {
+      return alert("اقصى عدد 4 صور");
+    }
+
+    for (let file of files) {
+      const base64 = await toBase64(file);
+      images.push(base64);
+    }
+  }
+
+  // عرض رسالة المستخدم + الصور
+  let imgsHTML = images.map(img => `<img src="${img}" width="70">`).join("");
+
   messages.innerHTML += `
-    <div class="msg userMsg">${prompt}</div>
+    <div class="msg userMsg">
+      ${prompt}
+      <div>${imgsHTML}</div>
+    </div>
   `;
 
   const res = await fetch("/generate", {
@@ -207,7 +254,8 @@ async function generate() {
       "Authorization": token
     },
     body: JSON.stringify({
-      prompt
+      prompt,
+      images
     })
   });
 
@@ -224,7 +272,7 @@ async function generate() {
   messages.scrollTop = messages.scrollHeight;
 }
 
-// ===== Navigation =====
+// Navigation
 function logout() {
   localStorage.removeItem("token");
   window.location.href = "/login.html";
@@ -245,5 +293,7 @@ function goImages() {
 function newChat() {
   messages.innerHTML = "";
 }
-</script></body>
+</script>
+
+</body>
 </html>

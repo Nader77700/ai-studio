@@ -126,18 +126,42 @@ return res.status(403).json({ error: "اشترك الاول" });
 }
 
 // 🔥 موديل ثابت
-const response = await axios.post(
-"https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
-{ inputs: prompt },
-{
-headers: {
-Authorization: `Bearer ${process.env.HF_TOKEN}`,
-"Content-Type": "application/json"
-},
-responseType: "arraybuffer",
-timeout: 60000
+let response;
+
+for (let i = 0; i < 3; i++) {
+  try {
+    response = await axios.post(
+      "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+      { inputs: prompt },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        responseType: "arraybuffer",
+        timeout: 60000
+      }
+    );
+
+    break;
+  } catch (err) {
+    console.log("Retry...", i + 1);
+    await new Promise(r => setTimeout(r, 2000));
+  }
 }
-);
+
+if (!response) {
+  return res.status(500).json({ error: "الموديل مش بيرد" });
+}
+
+const contentType = response.headers["content-type"];
+
+if (contentType.includes("application/json")) {
+  const errorData = JSON.parse(response.data.toString());
+  return res.status(500).json({
+    error: errorData.error || "الموديل لسه بيحمل"
+  });
+}
 
 const base64 = Buffer.from(response.data).toString("base64");
 
@@ -145,7 +169,7 @@ user.imagesCount += 1;
 await user.save();
 
 res.json({
-result: `data:image/png;base64,${base64}`
+  result: `data:image/png;base64,${base64}`
 });
 
 } catch (err) {

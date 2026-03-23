@@ -12,7 +12,38 @@ body {
   font-family:Arial;
 }
 
-input, button {
+/* HEADER */
+.header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px;
+  background:#111827;
+}
+
+.logo {
+  font-size:22px;
+  font-weight:bold;
+  color:#facc15;
+}
+
+.user {
+  font-size:14px;
+}
+
+button {
+  padding:10px 15px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.primary { background:#6c5ce7; color:white; }
+.danger { background:red; color:white; }
+.admin { background:gold; color:black; }
+
+input {
   width:80%;
   padding:12px;
   margin:10px;
@@ -20,44 +51,74 @@ input, button {
   border:none;
 }
 
-button {
-  background:#6c5ce7;
-  color:white;
-}
-
 img {
   width:300px;
   margin-top:20px;
   display:none;
+  border-radius:12px;
+}
+
+.section {
+  margin-top:30px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🔥 AI Studio</h2>
+<div class="header">
+  <div class="logo">🔥 AI Studio</div>
+  <div>
+    <span class="user">Welcome Nader 👑</span>
+    <button class="danger" onclick="logout()">Logout</button>
+    <button id="adminBtn" class="admin" style="display:none;" onclick="goAdmin()">Admin</button>
+  </div>
+</div>
 
-<button onclick="logout()">Logout</button>
+<div class="section">
+  <h2>Generate Image</h2>
 
-<input id="prompt" placeholder="اكتب وصف الصورة">
+  <input id="prompt" placeholder="اكتب وصف الصورة">
 
-<button onclick="generate()">Generate</button>
+  <button class="primary" onclick="generate()">Generate</button>
+
+  <img id="img">
+</div>
 
 <hr>
 
-<h3>رفع إثبات الدفع</h3>
-<input type="file" id="file">
-<button onclick="sendPayment()">ارسال</button>
+<div class="section">
+  <h3>💳 رفع إثبات الدفع</h3>
 
-<img id="img">
+  <input type="file" id="file">
+  <button class="primary" onclick="sendPayment()">ارسال</button>
+</div>
 
 <script>
 let token = localStorage.getItem("token");
 
+// حماية الصفحة
 if (!token) {
   window.location.href = "/login.html";
 }
 
+// 🔥 فك التوكن لمعرفة الدور
+function parseJwt(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+}
+
+const user = parseJwt(token);
+
+// 👑 إظهار زرار الأدمن
+if (user && user.role === "admin") {
+  document.getElementById("adminBtn").style.display = "inline-block";
+}
+
+// ================= GENERATE =================
 async function generate() {
   const res = await fetch("/generate", {
     method:"POST",
@@ -66,7 +127,7 @@ async function generate() {
       "Authorization": token
     },
     body: JSON.stringify({
-      prompt: prompt.value
+      prompt: document.getElementById("prompt").value
     })
   });
 
@@ -78,6 +139,7 @@ async function generate() {
   img.style.display = "block";
 }
 
+// ================= PAYMENT =================
 async function sendPayment() {
   const file = document.getElementById("file").files[0];
   const reader = new FileReader();
@@ -100,9 +162,14 @@ async function sendPayment() {
   reader.readAsDataURL(file);
 }
 
+// ================= NAV =================
 function logout() {
   localStorage.removeItem("token");
   window.location.href = "/login.html";
+}
+
+function goAdmin() {
+  window.location.href = "/admin.html";
 }
 </script>
 

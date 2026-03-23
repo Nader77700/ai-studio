@@ -6,7 +6,7 @@ const axios = require("axios");
 
 const app = express();
 app.use(express.json());
-app.use(express.static("public")); // مهم لصفحات الفرونت
+app.use(express.static("public"));
 
 // ================= DB =================
 mongoose.connect(process.env.MONGO_URI)
@@ -58,7 +58,7 @@ app.post("/register", async (req, res) => {
 
   const hashed = await bcrypt.hash(password, 10);
 
-  const user = await User.create({
+  await User.create({
     username,
     email,
     password: hashed
@@ -97,16 +97,63 @@ app.post("/submit-payment", auth, async (req, res) => {
 });
 
 // ================= ADMIN =================
-
-// كل الطلبات
 app.get("/admin/payments", async (req, res) => {
   const payments = await Payment.find();
   res.json(payments);
 });
 
-// الموافقة
 app.post("/admin/approve", async (req, res) => {
   const { id } = req.body;
+
+  const payment = await Payment.findById(id);
+
+  if (!payment) return res.json({ error: "Not found" });
+
+  payment.status = "approved";
+  await payment.save();
+
+  await User.findByIdAndUpdate(payment.userId, {
+    plan: "premium"
+  });
+
+  res.json({ message: "تم التفعيل ✅" });
+});
+
+// ================= GENERATE =================
+app.post("/generate", auth, async (req, res) => {
+  const user = await User.findById(req.user.id);
+
+  if (user.plan !== "premium") {
+    return res.status(403).json({ error: "اشترك الاول" });
+  }
+
+  try {
+    const response = await axios({
+      url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.HF_TOKEN}`
+      },
+      data: {
+        inputs: req.body.prompt
+      },
+      responseType: "arraybuffer"
+    });
+
+    const base64 = Buffer.from(response.data).toString("base64");
+
+    res.json({
+      result: `data:image/png;base64,${base64}`
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: "فشل التوليد" });
+  }
+});
+
+// ================= RUN =================
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Running 🚀"));  const { id } = req.body;
 
   const payment = await Payment.findById(id);
 
